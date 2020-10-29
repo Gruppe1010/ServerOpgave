@@ -8,6 +8,7 @@ public class ServerOpgave
     
     public static void main(String[] args)
     {
+        
         String httpRequest;
         ServerSocket welcomeSocket = null;
         File file;
@@ -17,13 +18,14 @@ public class ServerOpgave
         System.out.println("Initiating server");
         try
         {
-            welcomeSocket = new ServerSocket(8081);
+            // Ny socket oprettes med forbindelse til port 8081
+            welcomeSocket = new ServerSocket(8083);
             System.out.println("Socket found - server running");
         }
         catch(IOException e)
         {
             System.out.println("HTTP500 - Internal server error. The server isn't working right now.\\n\" +\n" +
-                                       "Please try again later. \"");
+                                       "Please try again later. \"" + e.getMessage());
             System.exit(69);
         }
         
@@ -32,6 +34,7 @@ public class ServerOpgave
         {
             try
             {
+                // TODO: her throwes potentielt IOException?????
                 Socket connectionSocket = welcomeSocket.accept(); // vi laver en connectionSocket ud fra welcomeSocket
                 System.out.println("You are connected");
     
@@ -44,22 +47,25 @@ public class ServerOpgave
                 // DataOutputStream tager primitive typer og returnerer som bytes (som læses af maskine)
                 // == DataOutputStream'en omdanner til bytes som getOutputStream så skriver til socket'en
                 DataOutputStream outputToClient = new DataOutputStream(connectionSocket.getOutputStream());
-                
-                httpRequest = inputFromClient.readLine();
     
-                StringTokenizer stringTokenizer = new StringTokenizer(httpRequest);
+                // httpRequest == get, getRequest(== det som står efter port-nr. i url), HTTP/1.1
+                httpRequest = inputFromClient.readLine();
+                // System.out.println(httpRequest);
+    
+                StringTokenizer stringTokenizer = new StringTokenizer(httpRequest); //
                 String request = stringTokenizer.nextToken(); //
                 
+                // TODO: find lige ud af hvordan man laver en anden type request end GET for at teste funktionen
                 if(!request.equals("GET")) // hvis det er en anden request end GET - så breaker den
                 {
                     file = new File(path + "/http400.html");
                     System.out.println("HTTP400 - bad request");
-                    break; // TODO her er måske en fejl - hvor breaker den?
+                    break; // TODO her er måske en fejl - kan man bruge break-keywordet her? Hvor breaker den?
                 }
                 
                 String getRequest = stringTokenizer.nextToken(); // Vi VED det er en getter, på dette tidspunkt i koden
     
-                file = new File(path + getRequest);
+                file = new File(path + getRequest); // her throwes potentielt IOException
                 
                 if(getRequest.equals("/")) // hvis den er /
                 {
@@ -76,30 +82,86 @@ public class ServerOpgave
                     System.out.println("HTTP200 - success");
                 }
                 
+                showFile(outputToClient, file);
                 
-           
-                
+                connectionSocket.close();
             }
             catch(IOException e)
             {
-                System.out.println("FEJL FEJL FEJL FEJL FEJL");
+                System.out.println("Fejlen er: " + e.getMessage());
             }
             
+           
+        }
+        
+    }
+    
+    /**
+     * Metode til at vise file-object på hjemmeside
+     *
+     *
+     * */
+    public static void showFile(DataOutputStream outputToClient, File file)
+    {
+      
+        try
+        {
+            FileInputStream inputFromFile = new FileInputStream(file);
+            
+            // finder filens længde
+            long fileLength = file.length(); // TODO: det kan være den ikke viser korrekt antal bytes
+    
+            // finder antal gange som for-loop skal køre - hvor mange gange går 30 op i fileLength'en
+            long numberOfByteArrays = fileLength / 30;
+            // finder resterende bytes i file udover hele 30'ere
+            long remainingBytes = fileLength % 30;
+            /*
+            // finder antal gange som for-loop skal køre - hvor mange gange går 30 op i fileLength'en
+            int numberOfByteArrays = (int) (fileLength / 30);
+            // finder resterende bytes i file udover hele 30'ere
+            int remainingBytes = (int) (fileLength % 30);
+            
+             */
+    
+            byte[] byteArray = new byte[30];
+    
+            
+            for(long i = 0; i <= numberOfByteArrays; i++)
+            {
+                System.out.println("TEST" + i);
+                // readFromFile er knyttet til file-objektet
+                // read()-metoden tager et byteArray og læse byteArrayet størrelse over i det
+                // == læser 30 bytes fra fil og lægger de 30 bytes over i byteArray'et
+                inputFromFile.read(byteArray);
+                
+                // udskriver byteArray til hjemmeside
+                outputToClient.write(byteArray);
+            }
+            
+            
+            /*
+            if(remainingBytes > 0)
+            {
+                // sætter byteArray til ny størrelse
+                byteArray = new byte[remainingBytes];
+                
+                inputFromFile.read(byteArray);
+                outputToClient.write(byteArray);
+            }
+            
+             */
+    
+        }
+        catch(IOException e)
+        {
+            System.out.println("Fejl i FileInputStream: " + e.getMessage());
         }
         
         
         
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+    
+    
     }
     
     
