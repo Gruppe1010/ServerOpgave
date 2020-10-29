@@ -126,7 +126,7 @@ public class ServerOpgave
             byte[] byteArray = new byte[30];
     
             
-            for(long i = 0; i <= numberOfByteArrays; i++)
+            for(long i = 0; i < numberOfByteArrays; i++)
             {
                 System.out.println("TEST" + i);
                 // readFromFile er knyttet til file-objektet
@@ -138,6 +138,15 @@ public class ServerOpgave
                 outputToClient.write(byteArray);
             }
             
+            while(remainingBytes > 0)
+            {
+                
+                byteArray = new byte[1];
+    
+                inputFromFile.read(byteArray);
+                outputToClient.write(byteArray);
+                remainingBytes =- 1;
+            }
             
             /*
             if(remainingBytes > 0)
@@ -156,15 +165,7 @@ public class ServerOpgave
         {
             System.out.println("Fejl i FileInputStream: " + e.getMessage());
         }
-        
-        
-        
-        
-    
-    
     }
-    
-    
 }
 
 
