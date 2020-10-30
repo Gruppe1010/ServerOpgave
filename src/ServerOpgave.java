@@ -5,9 +5,12 @@ import java.util.StringTokenizer;
 
 public class ServerOpgave
 {
+    /*
+    HTTP status codes:
     // 2XX = det gik godt
     // 4XX = brugeren har lavet en fejl
     // 5XX = vi har lavet en fejl
+    */
     
     public static void main(String[] args)
     {
@@ -15,7 +18,7 @@ public class ServerOpgave
         ServerSocket welcomeSocket = null;
         File file;
         String path = "src/resources";
-        ArrayList<String>
+        //
     
     
         System.out.println("Initiating server");
