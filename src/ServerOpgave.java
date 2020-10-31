@@ -1,6 +1,10 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.StringTokenizer;
 
 public class ServerOpgave
@@ -18,14 +22,16 @@ public class ServerOpgave
         ServerSocket welcomeSocket = null;
         File file;
         String path = "src/resources";
-        //
-    
-    
+        String statusCode;
+        // en List og ikke byteArray til at starte med, fordi vi ved ikke hvor stort array'et skal være
+        // List<String> httpHeader = new ArrayList<>();
+        
+        
         System.out.println("Initiating server");
         try
         {
             // Ny socket oprettes med forbindelse til port 8081
-            welcomeSocket = new ServerSocket(80);
+            welcomeSocket = new ServerSocket(8081);
             System.out.println("Socket found - server running");
         }
         catch(IOException e)
@@ -38,7 +44,6 @@ public class ServerOpgave
         boolean stayInWhile = true;
         while(stayInWhile)
         {
-           
             try
             {
                 // vi laver en connectionSocket ud fra welcomeSocket
@@ -59,7 +64,7 @@ public class ServerOpgave
                 // getRequest == det som står efter port-nr. i url
                 // HTTP/1.1 == browseren siger til os: "jeg kommunikerer i HTTP/1.1 - derfor skal i snakke"*/
                 httpRequest = inputFromClient.readLine();
-    
+                
                 StringTokenizer stringTokenizer = new StringTokenizer(httpRequest);
                 String request = stringTokenizer.nextToken(); // får første token = GET
                 
@@ -67,15 +72,19 @@ public class ServerOpgave
                 if(!request.equals("GET"))
                 {
                     file = new File(path + "/http400.html");
-                    // TODO ret lige i noget for at den ikke længere nede også sender:  outputToClient.writeBytes
-                    //  ("HTTP/1.1 200 OK"+ "\r\n") fordi filen eksisterer
-                    System.out.println("HTTP400 - bad request");
-                    // TODO lav  outputToClient.writeBytes("HTTP/1.1 400 bad request"+ "\r\n");
+                    statusCode = "400 bad response"; // fordi det ikke er en GET
+                    
+                    writeHttpHeader(outputToClient, file, statusCode);
+                    // writeFile(outputToClient, file);
+                    
+                    continue; // den
                 }
                 
                 String getRequest = stringTokenizer.nextToken(); // Vi VED det er en getter, på dette tidspunkt i koden
-    
+                
                 file = new File(path + getRequest); // her throwes potentielt IOException
+                
+                
                 
                 /*
                 if(!file.exists() && !getRequest.equals("/")) // hvis den IKKE eksisterer OG getRequesten IKKE er /
@@ -94,28 +103,34 @@ public class ServerOpgave
                 
                 if(getRequest.equals("/")) // hvis den er /
                 {
-                    System.out.println("HTTP200 - success");
+                    System.out.println("DEn er SLASH");
+                    statusCode = "200 OK";
                     file = new File(path + "/index.html");
+                    writeHttpHeader(outputToClient, file, statusCode);
                 }
                 else if(!file.exists()) // hvis den ikke findes
                 {
-                    System.out.println("HTTP404 - file not found");
+                    statusCode = "HTTP404 Not Found";
                     file = new File(path + "/http404.html");
                 }
                 
                 else // hvis den findes
                 {
-                    System.out.println("HTTP200 - success");
+                    statusCode = "200 OK";
+                    writeHttpHeader(outputToClient, file, statusCode);
                 }
     
                 /* browseren lukkede forbindelsen fordi vi ikke havde sagt hvad den kunne forvente: af type og længde
                 // Vi siger til browseren: "her har du et svar og det er i http/1.1. og svaret er 200 ok"
                 // \r == CR (carriage return), \n == LF (line feed)
                 // Det første vi skriver ud her til browseren er en header*/
+                /*
                 outputToClient.writeBytes("HTTP/1.1 200 OK"+ "\r\n"); // status-code 200's reason phrase == OK
                 outputToClient.writeBytes("Content-Length: "+ file.length() + "\r\n");
                 outputToClient.writeBytes("Content-Type: text/html" + "\r\n");
                 outputToClient.writeBytes( "\r\n");
+                
+                 */
                 
                 
                 // TODO: header-byteArray + fil/content-byteArray
@@ -124,18 +139,54 @@ public class ServerOpgave
                 // det næste vi skal skrive ud er body/content - vores fil som skrives ud
                 
                 
-                showFile(outputToClient, file);
+                printFile(outputToClient, file);
                 
+                // for at browseren ved at den ikke får mere output sendt til sig - vi siger til den: Nu er vi
+                // færdige med at sende ting til dig
                 connectionSocket.close();
             }
             catch(IOException e)
             {
                 System.out.println("Fejlen er: " + e.getMessage());
                 // TODO skriv en http500
+                
             }
             
-           
+            
         }
+        
+    }
+    
+    public static void writeHttpHeader(DataOutputStream outputToClient, File file, String statusCode)
+    {
+        try
+        {
+            // for at finde content type!
+            Path path = file.toPath(); // finder den path vi har sagt fx src\resources\index.html
+            
+            String mimeType = Files.probeContentType(path); // fx image/png
+    
+            // Ift. browseren er dette den ENESTE required linje vi skal sende tilbage til den
+            outputToClient.writeBytes("HTTP/1.1 " + statusCode + "\r\n");
+            outputToClient.writeBytes("Content-Length: " + file.length() + "\r\n");
+            outputToClient.writeBytes("Content-Type: " + mimeType + "\r\n");
+            outputToClient.writeBytes("\r\n");
+        }
+        catch(IOException e)
+        {
+            System.out.println("Error in writeHttpHeader: " + e.getMessage());
+        }
+        
+        
+    }
+    
+    
+    //
+    public static void printHttpHeader(List<String> httpHeader)
+    {
+        // omdan til bytearray
+        //byte[] headerByteArray = httpHeader.toArray(new byte[0]);
+        // print bytearray
         
     }
     
@@ -144,7 +195,7 @@ public class ServerOpgave
      *
      *
      * */
-    public static void showFile(DataOutputStream outputToClient, File file)
+    public static void printFile(DataOutputStream outputToClient, File file)
     {
         try
         {
@@ -152,7 +203,7 @@ public class ServerOpgave
             
             // finder filens længde
             long fileLength = file.length(); // TODO: det kan være den ikke viser korrekt antal bytes
-           
+            
             // finder antal gange som for-loop skal køre - hvor mange gange går 30 op i fileLength'en
             long numberOfByteArrays = fileLength / 30;
             
@@ -164,10 +215,15 @@ public class ServerOpgave
             // finder resterende bytes i file udover hele 30'ere
             int remainingBytes = (int) (fileLength % 30);
              */
-    
-            byte[] byteArray = new byte[30];
-    
             
+            byte[] byteArray = new byte[(int) fileLength];
+    
+            inputFromFile.read(byteArray);
+    
+            // udskriver byteArray til hjemmeside
+            outputToClient.write(byteArray);
+            
+            /*
             for(long i = 0; i < numberOfByteArrays; i++)
             {
                 // readFromFile er knyttet til file-objektet
@@ -190,8 +246,7 @@ public class ServerOpgave
                 outputToClient.write(byteArray);
             }
             
-            
-    
+             */
         }
         catch(IOException e)
         {
@@ -459,9 +514,9 @@ public class ServerOpgave
         
         
     /*
-        
-        
-        
+    
+    
+    
     }
 }
 */
