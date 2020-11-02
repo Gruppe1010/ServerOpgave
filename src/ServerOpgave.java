@@ -22,7 +22,7 @@ public class ServerOpgave
         ServerSocket welcomeSocket = null;
         File file;
         String path = "src/resources";
-        String statusCode;
+        String statusCode = null;
         // en List og ikke byteArray til at starte med, fordi vi ved ikke hvor stort array'et skal være
         // List<String> httpHeader = new ArrayList<>();
         
@@ -76,8 +76,9 @@ public class ServerOpgave
                     
                     writeHttpHeader(outputToClient, file, statusCode);
                     // writeFile(outputToClient, file);
-                    
-                    continue; // den
+
+                    // TODO: TEST om continue virker ellers sætter den statuscode til 200 OK længere nede i else (fordi filen jo eksisterer)
+                    //continue; // den
                 }
                 
                 String getRequest = stringTokenizer.nextToken(); // Vi VED det er en getter, på dette tidspunkt i koden
@@ -103,7 +104,7 @@ public class ServerOpgave
                 
                 if(getRequest.equals("/")) // hvis den er /
                 {
-                    System.out.println("DEn er SLASH");
+                    System.out.println("Den er SLASH");
                     statusCode = "200 OK";
                     file = new File(path + "/index.html");
                     writeHttpHeader(outputToClient, file, statusCode);
@@ -112,11 +113,13 @@ public class ServerOpgave
                 {
                     statusCode = "HTTP404 Not Found";
                     file = new File(path + "/http404.html");
+                    writeHttpHeader(outputToClient, file, statusCode);
                 }
                 
-                else // hvis den findes
+                else if(statusCode!=null) // hvis den findes
                 {
                     statusCode = "200 OK";
+
                     writeHttpHeader(outputToClient, file, statusCode);
                 }
     
@@ -167,9 +170,11 @@ public class ServerOpgave
             String mimeType = Files.probeContentType(path); // fx image/png
     
             // Ift. browseren er dette den ENESTE required linje vi skal sende tilbage til den
+
             outputToClient.writeBytes("HTTP/1.1 " + statusCode + "\r\n");
             outputToClient.writeBytes("Content-Length: " + file.length() + "\r\n");
             outputToClient.writeBytes("Content-Type: " + mimeType + "\r\n");
+            // TODO indsæt date her
             outputToClient.writeBytes("\r\n");
         }
         catch(IOException e)
